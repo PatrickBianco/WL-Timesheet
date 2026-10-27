@@ -1,0 +1,59 @@
+@model BackupSettingsInput
+@{
+    ViewData["Title"] = "Database backup";
+}
+
+<section class="login-card backup-card">
+    <span class="eyebrow">ADMINISTRATION</span>
+    <h1>Database backup</h1>
+    <p>Choose how often SQL Server writes a copy of the database, and how long those copies are kept. The example is one backup each week, kept for one month.</p>
+    @if (TempData["BackupSaved"] is string saved)
+    {
+        <p class="notice" role="status">@saved</p>
+    }
+    @if (TempData["BackupError"] is string failed)
+    {
+        <p class="notice error" role="alert">@failed</p>
+    }
+    else if (!string.IsNullOrEmpty(Model.LastBackupError))
+    {
+        <p class="notice error" role="alert">Last backup failed: @Model.LastBackupError</p>
+    }
+    <div class="backup-status">
+        <p class="field-note">@Model.LastBackupText</p>
+        <p class="field-note">@Model.NextBackupText</p>
+        <p class="field-note">@Model.FilesText</p>
+    </div>
+    <form id="backup-settings" method="post" action="/settings/backup">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="notice error" role="alert"></div>
+        <input asp-for="Version" type="hidden" />
+        <label class="checkbox" for="BackupEnabled">
+            <input asp-for="BackupEnabled" />
+            Back up automatically
+        </label>
+        <div class="backup-fields">
+            <div>
+                <label asp-for="BackupIntervalDays">Days between backups</label>
+                <input asp-for="BackupIntervalDays" type="number" min="1" max="365" step="1" required aria-describedby="interval-help" />
+                <p id="interval-help" class="field-note">7 days is one backup each week. Enter a whole number from 1 to 365.</p>
+            </div>
+            <div>
+                <label asp-for="BackupRetentionDays">Days to keep each backup</label>
+                <input asp-for="BackupRetentionDays" type="number" min="1" max="3650" step="1" required aria-describedby="retention-help" />
+                <p id="retention-help" class="field-note">30 days is about one month. Older files in this folder are deleted. Keep them at least as long as the interval.</p>
+            </div>
+        </div>
+        <label asp-for="BackupDirectory">Backup folder</label>
+        <input asp-for="BackupDirectory" spellcheck="false" autocomplete="off" maxlength="400" required aria-describedby="folder-help" />
+        <p id="folder-help" class="field-note">Example: C:\ProgramData\WLTimeSheet\Backups. SQL Server writes the file, so the folder must be on the SQL Server computer or on a share it can use. The SQL Server service account needs permission to create files there, and this application's account needs permission to delete expired files. Changing the folder leaves files in the previous folder where they are.</p>
+    </form>
+    <form id="backup-now" method="post" action="/settings/backup/run">
+        @Html.AntiForgeryToken()
+    </form>
+    <div class="backup-actions">
+        <button class="button primary" type="submit" form="backup-settings">Save backup settings</button>
+        <button class="button" type="submit" form="backup-now">Back up now</button>
+    </div>
+    <p class="field-note">Uses the saved folder and retention. Save first if you changed them.</p>
+</section>

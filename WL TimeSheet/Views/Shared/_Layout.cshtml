@@ -1,0 +1,142 @@
+@using Microsoft.AspNetCore.Antiforgery
+@using System.Reflection
+@inject IAntiforgery Antiforgery
+@inject IWebHostEnvironment HostingEnvironment
+@{
+    var employee = ViewData["Employee"] as Employee;
+    var page = ViewData["Page"] as string;
+    var appVersion = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="csrf-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+        <link rel="icon" type="image/svg+xml" href="~/favicon.svg" asp-append-version="true" />
+        <title>@ViewData["Title"] · Websters Lawyers</title>
+        <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+        <script src="~/js/timesheet.js" asp-append-version="true" defer></script>
+        <script src="~/js/site.js" asp-append-version="true" defer></script>
+    </head>
+    <body data-page="@(page)" data-employee="@employee?.Id">
+        <a href="#main" class="skip-link">Skip to content</a>
+        @if (employee is not null)
+        {
+            <aside class="sidebar" id="navigation">
+                <a href="/" class="brand">
+                    <img class="brand-logo" src="~/images/websters-lawyers.jpg" asp-append-version="true" alt="Websters Lawyers — Barristers &amp; Solicitors" width="790" height="389" />
+                </a>
+                <button class="mobile-toggle" type="button" aria-expanded="false" aria-controls="nav-links">
+                    <span class="icon icon-menu" aria-hidden="true"></span>
+                    Menu
+                </button>
+                <div id="nav-links" class="nav-content">
+                    <span class="nav-label">WORKSPACE</span>
+                    <nav aria-label="Main navigation">
+                        <a href="/" class="@(page == "timesheet" ? "active" : "")">
+                            <span class="icon icon-clock" aria-hidden="true"></span>
+                            My timesheet
+                        </a>
+                        @if ((bool?)ViewData["IsAdmin"] == true)
+                        {
+                            <a href="/admin" class="@(page == "admin" ? "active" : "")">
+                                <span class="icon icon-layout-dashboard" aria-hidden="true"></span>
+                                Team overview
+                            </a>
+                            <span class="nav-label">ADMINISTRATION</span>
+                            <a href="/admin/activity" class="@(page == "activity" ? "active" : "")">
+                                <span class="icon icon-list" aria-hidden="true"></span>
+                                Activity log
+                            </a>
+                            <a href="/employees" class="@(page == "employees" ? "active" : "")">
+                                <span class="icon icon-users" aria-hidden="true"></span>
+                                Employees
+                            </a>
+                            <a href="/task-types" class="@(page == "task-types" ? "active" : "")">
+                                <span class="icon icon-list-checks" aria-hidden="true"></span>
+                                Task types
+                            </a>
+                            <a href="/settings" class="@(page == "settings" ? "active" : "")">
+                                <span class="icon icon-clock" aria-hidden="true"></span>
+                                Timesheet settings
+                            </a>
+                            <a href="/settings/backup" class="@(page == "backup" ? "active" : "")">
+                                <span class="icon icon-download" aria-hidden="true"></span>
+                                Database backup
+                            </a>
+                            <a href="/account/password">
+                                <span class="icon icon-key-round" aria-hidden="true"></span>
+                                Change admin password
+                            </a>
+                        }
+                        else
+                        {
+                            <a href="/account/admin-unlock">
+                                <span class="icon icon-shield-check" aria-hidden="true"></span>
+                                Administration
+                            </a>
+                        }
+                    </nav>
+                    <div class="sidebar-bottom">
+                        <span class="avatar">@employee.DisplayName[..1].ToUpperInvariant()</span>
+                        <div>
+                            <strong>@employee.DisplayName</strong>
+                            <small>@(HostingEnvironment.IsEnvironment("ClientReview")?"Sample review account":"Windows account")</small>
+                        </div>
+                    </div>
+                    @if (HostingEnvironment.IsEnvironment("ClientReview"))
+                    {
+                        <form action="/review/logout" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="signout">
+                                <span class="icon icon-log-out" aria-hidden="true"></span>
+                                Sign out of preview
+                            </button>
+                        </form>
+                    }
+                    @if ((bool?)ViewData["IsAdmin"] == true)
+                    {
+                        <form action="/account/admin-lock" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="signout">
+                                <span class="icon icon-log-out" aria-hidden="true"></span>
+                                Lock administration
+                            </button>
+                        </form>
+                    }
+                </div>
+            </aside>
+        }
+        <div class="@(employee is not null ? "workspace" : "public-workspace")">
+            @if (employee is not null)
+            {
+                <header class="topbar">
+                    <span>
+                        Workspace
+                        <span class="crumb">/</span>
+                        @ViewData["Title"]
+                    </span>
+                    <span class="firm-label">
+                        WEBSTERS LAWYERS
+                        <span class="status-dot"></span>
+                    </span>
+                </header>
+            }
+            <main id="main">
+                @if (HostingEnvironment.IsEnvironment("ClientReview"))
+                {
+                    <p class="notice" data-persist>Client preview · sample data only. Please do not enter real client information.</p>
+                }
+                @RenderBody()
+            </main>
+            <footer class="page-footer">
+                <span>Websters Lawyers</span>
+                <span>Version @appVersion</span>
+            </footer>
+        </div>
+        <div id="toast" class="toast" role="status" hidden></div>
+        @await RenderSectionAsync("Scripts", required: false)
+    </body>
+</html>

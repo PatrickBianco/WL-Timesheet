@@ -1,0 +1,25 @@
+@model UnlockInput
+@{
+    ViewData["Title"] = "Unlock administration";
+}
+
+<section class="login-card">
+    <span class="eyebrow">ADMINISTRATION</span>
+    <h1>Administrator access</h1>
+    <p>Your Windows account remains signed in. Enter the administration password to manage task types, review reports and reopen timesheets.</p>
+    @if (Context.Request.Query.ContainsKey("changed"))
+    {
+        <div class="notice">Password changed. All previous administrator sessions have been locked.</div>
+    }
+    <form method="post" action="/account/admin-unlock">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="notice error"></div>
+        <label asp-for="Password">Administrator password</label>
+        <input asp-for="Password" type="password" autocomplete="current-password" required autofocus />
+        <div class="dialog-actions">
+            <a href="/" class="button">My timesheet</a>
+            <button class="button primary">Unlock administration</button>
+        </div>
+    </form>
+    <p class="field-note">Administrator access expires after 30 minutes.</p>
+</section>

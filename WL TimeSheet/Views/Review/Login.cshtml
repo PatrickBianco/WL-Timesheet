@@ -1,0 +1,18 @@
+@model UnlockInput
+@{
+    ViewData["Title"] = "Client preview";
+}
+
+<section class="login-card">
+    <img class="brand-logo" src="~/images/websters-lawyers.jpg" asp-append-version="true" alt="Websters Lawyers" width="790" height="389" />
+    <span class="eyebrow">CLIENT PREVIEW</span>
+    <h1>Review the timesheet</h1>
+    <p>This preview uses sample data. Enter the review password to try the application.</p>
+    <form method="post" action="/review/login">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="notice error"></div>
+        <label asp-for="Password">Review password</label>
+        <input asp-for="Password" type="password" autocomplete="current-password" required autofocus />
+        <button type="submit" class="button primary">Open preview</button>
+    </form>
+</section>

@@ -1,0 +1,114 @@
+@{
+    var employees = (string?)ViewData["Page"] == "employees";
+    ViewData["Title"] = employees ? "Employees" : "Task types";
+}
+
+<section class="page-heading">
+    <div>
+        <span class="eyebrow">ADMINISTRATION</span>
+        <h1>@ViewData["Title"]</h1>
+        <p>@(employees?"Windows accounts appear automatically on their first visit.":"Manage categories, breaks and the details employees should provide.")</p>
+    </div>
+    @if (!employees)
+    {
+        <button id="add-record" class="button primary">
+            <span class="icon icon-plus" aria-hidden="true"></span>
+            Add task type
+        </button>
+    }
+</section>
+<div id="page-error" class="notice error" role="alert" hidden></div>
+<section class="panel">
+    <div class="panel-toolbar">
+        <h2>@(employees?"Employee directory":"Task type library")</h2>
+        <label class="search-label">
+            <span class="sr-only">Search</span>
+            <input id="management-search" type="search" placeholder="Search…" />
+        </label>
+    </div>
+    <div id="records" class="records" aria-live="polite">Loading…</div>
+    <div class="pagination" id="management-pagination">
+        <label>
+            Rows per page
+            <select id="page-size">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </label>
+        <span id="page-range" aria-live="polite"></span>
+        <div class="page-navigation">
+            <button type="button" id="page-previous" class="icon-button" aria-label="Previous page">
+                <span class="icon icon-chevron-left" aria-hidden="true"></span>
+            </button>
+            <label>
+                Page
+                <input id="page-number" type="number" min="1" value="1" aria-label="Page number" />
+            </label>
+            <span id="page-count"></span>
+            <button type="button" id="page-next" class="icon-button" aria-label="Next page">
+                <span class="icon icon-chevron-right" aria-hidden="true"></span>
+            </button>
+        </div>
+    </div>
+    <div class="panel-footer">
+        <span id="record-count"></span>
+        <span>Active and inactive records</span>
+    </div>
+</section>
+<dialog id="management-dialog" aria-labelledby="management-title">
+    <form id="management-form">
+        <div class="dialog-heading">
+            <h2 id="management-title">Edit</h2>
+            <button type="button" data-close class="icon-button" aria-label="Close">
+                <span class="icon icon-x" aria-hidden="true"></span>
+            </button>
+        </div>
+        <div id="management-error" class="notice error" role="alert" hidden></div>
+        <input id="record-id" type="hidden" />
+        <input id="record-version" type="hidden" />
+        <label>
+            @(employees?"Display name":"Task type name")
+            <input id="record-name" maxlength="@(employees?160:120)" required />
+        </label>
+        @if (employees)
+        {
+            <p id="record-account" class="field-note"></p>
+            <label>
+                Company email
+                <span class="optional">optional</span>
+                <input id="record-email" type="email" maxlength="254" />
+            </label>
+        }
+        else
+        {
+            <label>
+                Explanatory notes
+                <textarea id="record-notes" rows="4" maxlength="2000"></textarea>
+            </label>
+            <label class="checkbox">
+                <input id="record-break" type="checkbox" />
+                Break - exclude from productive totals
+            </label>
+            <label>
+                Description requirement
+                <select id="record-rule">
+                    <option value="0">Optional (guidance only)</option>
+                    <option value="1">Description required</option>
+                    <option value="2">Number of files closed required</option>
+                </select>
+            </label>
+            <p class="field-note">Changing break status affects new entries. Existing entries retain their recorded break status.</p>
+        }
+        <label class="checkbox">
+            <input id="record-active" type="checkbox" checked />
+            Active
+        </label>
+        <p class="field-note">@(employees?"Inactive employees cannot use the application.":"Deactivate unused task types to preserve historical records.")</p>
+        <div class="dialog-actions">
+            <button type="button" class="button" data-close>Cancel</button>
+            <button class="button primary">Save changes</button>
+        </div>
+    </form>
+</dialog>

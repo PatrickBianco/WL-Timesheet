@@ -1,0 +1,153 @@
+@model ActivityLogPage
+@using WL_TimeSheet.Services
+@{
+    ViewData["Title"] = "Activity log";
+    var first = Model.Total == 0 ? 0 : (Model.Page - 1) * Model.PageSize + 1;
+    var last = Math.Min(Model.Total, Model.Page * Model.PageSize);
+    string Link(int page) => "/admin/activity?" + string.Join("&", new[]
+    {
+        Model.EmployeeId is Guid employeeId ? "employeeId=" + employeeId : null,
+        Model.From is DateOnly from ? "from=" + from.ToString("yyyy-MM-dd") : null,
+        Model.To is DateOnly to ? "to=" + to.ToString("yyyy-MM-dd") : null,
+        "page=" + page,
+        "pageSize=" + Model.PageSize
+    }.Where(x => x is not null));
+}
+
+<section class="page-heading">
+    <div>
+        <span class="eyebrow">ADMINISTRATION</span>
+        <h1>Activity log</h1>
+        <p>Timesheet changes from the last two months. Task descriptions are not copied here.</p>
+    </div>
+</section>
+<section class="panel">
+    <form class="filters" method="get" action="/admin/activity">
+        <label>
+            Employee
+            <select name="employeeId">
+                <option value="">Everyone</option>
+                @foreach (var employee in Model.Employees)
+                {
+                    if (Model.EmployeeId == employee.Id)
+                    {
+                        <option value="@employee.Id" selected>@employee.DisplayName</option>
+                    }
+                    else
+                    {
+                        <option value="@employee.Id">@employee.DisplayName</option>
+                    }
+                }
+            </select>
+        </label>
+        <label>
+            From
+            <input name="from" type="date" value="@Model.From?.ToString("yyyy-MM-dd")" />
+        </label>
+        <label>
+            To
+            <input name="to" type="date" value="@Model.To?.ToString("yyyy-MM-dd")" />
+        </label>
+        <input type="hidden" name="pageSize" value="@Model.PageSize" />
+        <button class="button primary" type="submit">Apply</button>
+        @if (Model.EmployeeId is not null || Model.From is not null || Model.To is not null)
+        {
+            <a class="button" href="/admin/activity">Clear</a>
+        }
+    </form>
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="empty-state">
+            <h3>No activity</h3>
+            <p>Nothing in the last two months matches this filter.</p>
+        </div>
+    }
+    else
+    {
+        <div class="records">
+            @foreach (var row in Model.Rows)
+            {
+                <article class="record-row">
+                    <div class="record-info">
+                        <strong>@row.ActorName</strong>
+                        <p>@row.Summary</p>
+                    </div>
+                    <div class="activity-when">
+                        <span class="badge">@row.When</span>
+                        @if (!row.OwnTimesheet)
+                        {
+                            <span class="badge">@row.SubjectName · @row.WorkDate</span>
+                        }
+                    </div>
+                </article>
+            }
+        </div>
+    }
+    <div class="pagination">
+        <label>
+            Rows per page
+            <select id="activity-page-size" name="pageSize" form="activity-page-size-form">
+                @foreach (var size in new[] { 10, 20, 50, 100 })
+                {
+                    if (size == Model.PageSize)
+                    {
+                        <option value="@size" selected>@size</option>
+                    }
+                    else
+                    {
+                        <option value="@size">@size</option>
+                    }
+                }
+            </select>
+        </label>
+        <span>@first–@last of @Model.Total</span>
+        <div class="page-navigation">
+            @if (Model.Page > 1)
+            {
+                <a class="icon-button" href="@Link(Model.Page - 1)" aria-label="Previous page">
+                    <span class="icon icon-chevron-left" aria-hidden="true"></span>
+                </a>
+            }
+            else
+            {
+                <span class="icon-button" aria-disabled="true">
+                    <span class="icon icon-chevron-left" aria-hidden="true"></span>
+                </span>
+            }
+            <span>Page @Model.Page of @Model.Pages</span>
+            @if (Model.Page < Model.Pages)
+            {
+                <a class="icon-button" href="@Link(Model.Page + 1)" aria-label="Next page">
+                    <span class="icon icon-chevron-right" aria-hidden="true"></span>
+                </a>
+            }
+            else
+            {
+                <span class="icon-button" aria-disabled="true">
+                    <span class="icon icon-chevron-right" aria-hidden="true"></span>
+                </span>
+            }
+        </div>
+    </div>
+    <div class="panel-footer">
+        <span>Entries are kept for 2 months, then removed.</span>
+        <span>Clock-in, tasks, deletes and reopens</span>
+    </div>
+</section>
+<form id="activity-page-size-form" method="get" action="/admin/activity">
+    @if (Model.EmployeeId is Guid selectedEmployee)
+    {
+        <input type="hidden" name="employeeId" value="@selectedEmployee" />
+    }
+    @if (Model.From is DateOnly fromDate)
+    {
+        <input type="hidden" name="from" value="@fromDate.ToString("yyyy-MM-dd")" />
+    }
+    @if (Model.To is DateOnly toDate)
+    {
+        <input type="hidden" name="to" value="@toDate.ToString("yyyy-MM-dd")" />
+    }
+</form>
+<script>
+    document.getElementById("activity-page-size").addEventListener("change", (event) => event.target.form.requestSubmit());
+</script>

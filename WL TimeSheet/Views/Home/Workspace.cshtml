@@ -1,0 +1,315 @@
+@inject WL_TimeSheet.Services.TimesheetPolicy Policy
+@{
+    var admin = (string?)ViewData["Page"] == "admin";
+    ViewData["Title"] = admin ? "Team overview" : "My timesheet";
+    var today = Policy.Today.ToString("yyyy-MM-dd");
+}
+
+<section class="page-heading">
+    <div>
+        <span class="eyebrow">@(admin?"THE BIGGER PICTURE":"MAKE EVERY DAY COUNT")</span>
+        <h1>@ViewData["Title"]</h1>
+        <p>@(admin?"Review productive time, breaks and your team's work.":"Log your day using the unit setting shown below, one row at a time.")</p>
+    </div>
+    <div class="segmented" aria-label="Timesheet view">
+        <button type="button" id="list-mode" aria-pressed="true">
+            <span class="icon icon-list" aria-hidden="true"></span>
+            List
+        </button>
+        <button type="button" id="calendar-mode" aria-pressed="false">
+            <span class="icon icon-calendar-days" aria-hidden="true"></span>
+            Calendar
+        </button>
+    </div>
+</section>
+<div id="page-error" class="notice error" role="alert" hidden></div>
+<section class="panel timesheet-panel">
+    <div class="timesheet-toolbar">
+        <div class="date-navigation">
+            <button type="button" id="previous" class="icon-button" aria-label="Previous day or month">
+                <span class="icon icon-chevron-left" aria-hidden="true"></span>
+            </button>
+            <h2 id="date-title">Timesheet</h2>
+            <button type="button" id="next" class="icon-button" aria-label="Next day or month">
+                <span class="icon icon-chevron-right" aria-hidden="true"></span>
+            </button>
+            <button type="button" id="today" class="button small">Today</button>
+        </div>
+        <form id="filters" class="filters">
+            @if (admin)
+            {
+                <label>
+                    Employee
+                    <select id="employee-filter">
+                        <option value="">All employees</option>
+                    </select>
+                </label>
+            }
+            <label>
+                @(admin?"Date from":"Work date")
+                <input type="date" id="date-from" value="@today" required />
+            </label>
+            @if (admin)
+            {
+                <label>
+                    Date to
+                    <input type="date" id="date-to" value="@today" required />
+                </label>
+            }
+            <label>
+                Task type
+                <select id="type-filter">
+                    <option value="">All task types</option>
+                </select>
+            </label>
+            <button type="submit" class="button small">Apply filters</button>
+        </form>
+    </div>
+    <div id="list-section-heading" class="daily-heading">
+        <h2>DAILY TIMESHEET</h2>
+        <div id="export-actions" class="export-actions">
+            <button type="button" id="export" class="button small">
+                <span class="icon icon-download" aria-hidden="true"></span>
+                Excel
+            </button>
+            <button type="button" id="export-csv" class="button small">
+                <span class="icon icon-download" aria-hidden="true"></span>
+                CSV
+            </button>
+        </div>
+    </div>
+    @if (!admin)
+    {
+        <div id="day-form-home">
+            <form id="day-form" class="day-details">
+                <p id="day-status" class="field-note" role="status" aria-live="polite"></p>
+                <div class="daily-fields">
+                    <label>
+                        Display name
+                        <input id="day-name" maxlength="160" required />
+                    </label>
+                    <div class="clock-save">
+                        <label>
+                            Clock-in time
+                            <input id="clock-in" type="time" step="60" required />
+                        </label>
+                    </div>
+                </div>
+                <p id="rounded-start" class="field-note"></p>
+            </form>
+        </div>
+    }
+    else
+    {
+        <div id="reopen-section" class="day-details" hidden>
+            <p id="reopen-status"></p>
+            <button type="button" id="reopen-day" class="button small">Reopen selected day</button>
+        </div>
+    }
+    <div id="loading" class="load-status" role="status" hidden>Updating timesheet…</div>
+    <div id="list-view">
+        <div class="entry-head list-columns">
+            <span>Time / Duration</span>
+            <span>Units</span>
+            <span>Task type</span>
+            <span>Description</span>
+            <span>Actions</span>
+        </div>
+        <div id="entries" tabindex="0" aria-label="Recorded tasks"></div>
+        @if (!admin)
+        {
+            <div id="inline-new-host"></div>
+            <p id="inline-help" class="inline-help">Tab between fields. Enter saves a completed row and starts the next.</p>
+        }
+        <div class="pagination" id="list-pagination">
+            <label>
+                Rows per page
+                <select id="page-size">
+                    <option value="10">10</option>
+                    <option value="20" selected>20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </label>
+            <span id="page-range" aria-live="polite"></span>
+            <div class="page-navigation">
+                <button type="button" id="page-previous" class="icon-button" aria-label="Previous page">
+                    <span class="icon icon-chevron-left" aria-hidden="true"></span>
+                </button>
+                <label>
+                    Page
+                    <input id="page-number" type="number" min="1" value="1" aria-label="Page number" />
+                </label>
+                <span id="page-count"></span>
+                <button type="button" id="page-next" class="icon-button" aria-label="Next page">
+                    <span class="icon icon-chevron-right" aria-hidden="true"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="calendar-view" hidden>
+        <div class="calendar-layout">
+            <div class="calendar-month">
+                <div class="calendar-weekdays" aria-hidden="true">
+                    <span>Mon</span>
+                    <span>Tue</span>
+                    <span>Wed</span>
+                    <span>Thu</span>
+                    <span>Fri</span>
+                    <span>Sat</span>
+                    <span>Sun</span>
+                </div>
+                <div id="calendar" class="calendar" aria-label="Monthly timesheet"></div>
+                <p class="calendar-note">Select a day to review its tasks. Use its plus button to add time.</p>
+            </div>
+            <aside class="day-overview" aria-labelledby="overview-title">
+                <div class="overview-heading">
+                    <div class="overview-title-row">
+                        <span class="eyebrow">DAY OVERVIEW</span>
+                        @if (!admin)
+                        {
+                            <button id="calendar-add" class="button small" type="button" disabled>
+                                <span class="icon icon-plus" aria-hidden="true"></span>
+                                Add task
+                            </button>
+                        }
+                    </div>
+                    <h2 id="overview-title"></h2>
+                    <p id="overview-total"></p>
+                </div>
+                <div id="overview-entries"></div>
+                <div class="overview-paging">
+                    <button type="button" id="overview-previous" class="button small">Previous</button>
+                    <span id="overview-range"></span>
+                    <button type="button" id="overview-next" class="button small">Next</button>
+                </div>
+                <div id="calendar-day-details"></div>
+                <div id="calendar-export-home"></div>
+            </aside>
+        </div>
+    </div>
+    <div class="panel-footer">
+        <span id="result-count">Your timesheet</span>
+        <span id="unit-caption">Loading unit setting…</span>
+    </div>
+</section>
+<section class="stats" aria-label="Timesheet totals">
+    <article>
+        <span>Productive time</span>
+        <strong id="total-time">—</strong>
+        <small id="total-caption">Breaks excluded</small>
+    </article>
+    <article>
+        <span>Break time</span>
+        <strong id="total-breaks">—</strong>
+        <small>Included in your timeline</small>
+    </article>
+    <article>
+        <span>Total units</span>
+        <strong id="total-units">—</strong>
+        <small>Durations use each day's unit setting</small>
+    </article>
+    <article>
+        <span>Tasks recorded</span>
+        <strong id="total-tasks">—</strong>
+        <small id="elapsed-caption">Elapsed time —</small>
+    </article>
+</section>
+@if (admin)
+{
+    <section class="panel summary-panel">
+        <h2>Daily & weekly productive totals</h2>
+        <div id="period-totals" class="period-totals"></div>
+    </section>
+    <dialog id="reopen-dialog" aria-labelledby="reopen-title">
+        <form id="reopen-form">
+            <h2 id="reopen-title">Reopen this timesheet</h2>
+            <p>The employee can edit this day for @Policy.Options.ReopenHours hours.</p>
+            <label>
+                Reason
+                <textarea id="reopen-reason" required maxlength="500"></textarea>
+            </label>
+            <div class="dialog-actions">
+                <button type="button" class="button" data-close>Cancel</button>
+                <button type="submit" class="button primary">Reopen</button>
+            </div>
+        </form>
+    </dialog>
+}
+else
+{
+    <dialog id="entry-dialog" class="task-drawer" aria-labelledby="entry-title">
+        <form id="entry-form">
+            <div class="dialog-heading">
+                <div>
+                    <span class="eyebrow">YOUR TIMESHEET</span>
+                    <h2 id="entry-title">Add task</h2>
+                </div>
+                <button type="button" class="icon-button" data-close aria-label="Close">
+                    <span class="icon icon-x" aria-hidden="true"></span>
+                </button>
+            </div>
+            <div id="entry-error" class="notice error" role="alert" hidden></div>
+            <input id="entry-id" type="hidden" />
+            <input id="entry-version" type="hidden" />
+            <div class="drawer-context">
+                <span>WORK DATE</span>
+                <strong id="entry-work-date"></strong>
+                <p id="entry-day-summary"></p>
+            </div>
+            <section id="entry-day-setup" class="drawer-setup" hidden>
+                <h3>Start this day's timesheet</h3>
+                <p>Set your clock-in time before adding the first task.</p>
+                <label>
+                    Display name
+                    <input id="entry-day-name" maxlength="160" />
+                </label>
+                <label>
+                    Clock-in time
+                    <input id="entry-clock-in" type="time" step="60" />
+                </label>
+            </section>
+            <div class="form-grid">
+                <label>
+                    Units
+                    <input id="units" type="number" min="0" max="1440" step="1" required />
+                    <small id="entry-unit-hint">Whole units</small>
+                </label>
+                <div class="duration-box">
+                    <span>Calculated duration</span>
+                    <output id="duration">—</output>
+                </div>
+            </div>
+            <p id="entry-timeline" class="notice"></p>
+            <label id="task-type-label" for="task-search">Task type</label>
+            <div class="combobox">
+                <input id="task-search" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="task-options" autocomplete="off" placeholder="Search task types…" required />
+                <div id="task-options" role="listbox" aria-labelledby="task-type-label" hidden></div>
+            </div>
+            <label id="files-label" hidden>
+                Number of files closed
+                <input id="files-closed" type="number" min="0" max="1000000" step="1" />
+            </label>
+            <label>
+                Description
+                <span id="description-hint" class="optional">optional</span>
+                <textarea id="description" rows="4" maxlength="4000" placeholder="What did you work on?"></textarea>
+            </label>
+            <p class="field-note">Changing units recalculates the start and finish of every later task.</p>
+            <div class="dialog-actions">
+                <button type="button" class="button" data-close>Cancel</button>
+                <button type="submit" class="button primary">Save task</button>
+            </div>
+        </form>
+    </dialog>
+}
+<dialog id="confirm-dialog" aria-labelledby="confirm-title">
+    <form id="confirm-form">
+        <h2 id="confirm-title">Delete this task?</h2>
+        <p>Later tasks move earlier in the timeline. This cannot be undone.</p>
+        <div class="dialog-actions">
+            <button class="button" type="button" data-close>Keep task</button>
+            <button type="submit" class="button danger">Delete task</button>
+        </div>
+    </form>
+</dialog>

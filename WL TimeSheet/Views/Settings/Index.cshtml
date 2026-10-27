@@ -1,0 +1,26 @@
+@model UnitSettingsInput
+@{
+    ViewData["Title"] = "Timesheet settings";
+}
+
+<section class="login-card">
+    <span class="eyebrow">ADMINISTRATION</span>
+    <h1>Timesheet settings</h1>
+    <p>Choose how many minutes one unit represents on newly created timesheets.</p>
+    @if (TempData["SettingsSaved"] is string message)
+    {
+        <p class="notice" role="status">@message</p>
+    }
+    <form method="post" action="/settings">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="notice error" role="alert"></div>
+        <input asp-for="Version" type="hidden" />
+        <label asp-for="MinutesPerUnit">Minutes per unit</label>
+        <input asp-for="MinutesPerUnit" type="number" min="1" max="60" step="1" required aria-describedby="unit-help" />
+        <p id="unit-help" class="field-note">For example: 1 means one minute per unit; 6 means six minutes per unit. Enter a whole number from 1 to 60.</p>
+        <p class="field-note">Existing daily timesheets keep their setting, including when tasks are added or edited later. Recorded durations and reports stay unchanged. No restart is needed.</p>
+        <div class="dialog-actions">
+            <button class="button primary">Save settings</button>
+        </div>
+    </form>
+</section>
